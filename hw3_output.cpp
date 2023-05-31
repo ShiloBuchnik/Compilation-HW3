@@ -8,7 +8,9 @@ const std::string output::rules[] = {
         "Program -> Funcs",
         "Funcs -> epsilon",
         "Funcs -> FuncDecl Funcs",
-        "FuncDecl -> RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE",
+        "FuncDecl -> OverRide RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE",
+	    "OverRide -> epsilon",
+	    "OverRide -> OVERRIDE",
         "RetType -> Type",
         "RetType ->  VOID",
         "Formals -> epsilon",
@@ -238,7 +240,6 @@ Node_FormalDecl::Node_FormalDecl(Node_Exp* node_type, Node_Token* node_token_id)
 
 Node_Program::Node_Program(Node_FuncsList* node_funcsList):
     Generic_Node({node_funcsList}){
-    
 }
 
 /// ############################################################################## ///
@@ -267,6 +268,17 @@ Node_Formals::Node_Formals(Node_FormalsList* node_formalsList): Generic_Node({no
     parameter_list = node_formalsList->parameter_list;
 }
 
+
+/// ############################################################################## ///
+/// ############################    Node_Override    ###########################///
+/// ############################################################################## ///
+Node_Override::Node_Override(): Generic_Node({}) {
+
+}
+
+Node_Override::Node_Override(Node_Token* node_override): Generic_Node({node_override}) {
+
+}
 
 
 /// ############################################################################## ///
@@ -544,15 +556,15 @@ Node_Statement_LoopMod::Node_Statement_LoopMod(Node_Token* node_loop_mod, Node_T
 /// ############################    Node_FuncDecl    ############################///
 /// ############################################################################## ///
 
-Node_FuncDecl::Node_FuncDecl(Node_RetType* node_retType, Node_Token* node_id,
+Node_FuncDecl::Node_FuncDecl(Node_Override* node_override, Node_RetType* node_retType, Node_Token* node_id,
                              Node_Token* node_lparen, Node_Formals* node_formals,
                              Node_Token* node_rparen, Node_Token* node_lbrace,
                              Node_Statement* node_statement, Node_Token* node_rbrace)
-                             : Generic_Node({node_retType, node_id, node_lparen, node_formals, node_rparen, node_lbrace, node_statement, node_rbrace}){
+                             : Generic_Node({node_override, node_retType, node_id, node_lparen, node_formals, node_rparen, node_lbrace, node_statement, node_rbrace}){
      
 }
 
-void Node_FuncDecl::newFuncFrame(Node_RetType *node_retType, Node_Token *node_id, Node_Token *node_lparen,
+void Node_FuncDecl::newFuncFrame(Node_Override* node_override, Node_RetType *node_retType, Node_Token *node_id, Node_Token *node_lparen,
                              Node_Formals *node_formals, Node_Token * node_rparen){
     Log() << "newFuncFrame:: " << node_id->value << std::endl;
     frame_manager.newEntry(DeclType::FUNC, node_id->value, node_retType->type, node_formals->parameter_list);

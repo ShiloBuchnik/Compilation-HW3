@@ -74,11 +74,6 @@ public:
     AppaException(long line_number) : std::exception() {
         lineno = line_number;
     }
-    /*
-    const char* what() const noexcept override{
-            
-            return "A game related error has occurred: IllegalArgument";
-    }*/
 };
 
 class Lexception : public AppaException {
@@ -98,21 +93,21 @@ public:
 
 class UndefExc : public AppaException {
 public:
-    UndefExc(long lineno, std::string &id) : AppaException(lineno) {
+    UndefExc(long lineno, std::string& id) : AppaException(lineno) {
         output::errorUndef(lineno, id);
     };
 };
 
 class DefExc : public AppaException {
 public:
-    DefExc(long lineno, std::string &id) : AppaException(lineno) {
+    DefExc(long lineno, std::string& id) : AppaException(lineno) {
         output::errorDef(lineno, id);
     };
 };
 
 class UndDefFuncExc : public AppaException {
 public:
-    UndDefFuncExc(long lineno, std::string &id) : AppaException(lineno) {
+    UndDefFuncExc(long lineno, std::string& id) : AppaException(lineno) {
         output::errorUndefFunc(lineno, id);
     };
 };
@@ -126,7 +121,7 @@ public:
 
 class PrototypeMismatchExc : public AppaException {
 public:
-    PrototypeMismatchExc(long lineno, std::string &id, std::vector<std::string> param_types) : AppaException(lineno) {
+    PrototypeMismatchExc(long lineno, std::string& id, std::vector<std::string> param_types) : AppaException(lineno) {
         output::errorPrototypeMismatch(lineno, id, param_types);
     };
 };
@@ -154,7 +149,7 @@ public:
 
 class ByteTooLargeExc : public AppaException {
 public:
-    ByteTooLargeExc(long lineno, std::string &value) : AppaException(lineno) {
+    ByteTooLargeExc(long lineno, std::string& value) : AppaException(lineno) {
         output::errorByteTooLarge(lineno, value);
     }
 };
@@ -185,11 +180,11 @@ public:
     Symbol(Type sym_type, std::string sym_name) : type(sym_type), name(sym_name) {
     }
     
-    Symbol(Symbol &) = default;
+    Symbol(Symbol&) = default;
     
-    Symbol(Symbol const &) = default;
+    Symbol(Symbol const&) = default;
     
-    Symbol& operator=(Symbol const &sym) = default;
+    Symbol& operator=(Symbol const& sym) = default;
     
     static Symbol invalidSymbol() {
         return Symbol(Type::INVALID, "");
@@ -210,11 +205,11 @@ public:
     
     ~symTableEntry() = default;
     
-    symTableEntry(symTableEntry &entry) = default;
+    symTableEntry(symTableEntry& entry) = default;
     
     virtual void print() const=0;
     
-    friend std::ostream &operator<<(std::ostream &os, const symTableEntry &entry) {
+    friend std::ostream& operator<<(std::ostream& os, const symTableEntry& entry) {
         entry.print();
         return os;
     };
@@ -226,7 +221,7 @@ public:
     symTableEntryID(Symbol sym, DeclType entry_type, long entry_offset) : symTableEntry(sym, entry_type, entry_offset, true) {
     }
     ~symTableEntryID() = default;
-    symTableEntryID(symTableEntryID &entry) = default;
+    symTableEntryID(symTableEntryID& entry) = default;
     
     void print() const override;
 };
@@ -241,7 +236,7 @@ public:
         parameter_list = func_params;
     }
     ~symTableEntryFunc() = default;
-    symTableEntryFunc(symTableEntryFunc &entry) = default;
+    symTableEntryFunc(symTableEntryFunc& entry) = default;
 
     // Returns a vector of types, corresponding to the vector of parameters
     std::vector<Type> paramsToTypeVec() const{
@@ -264,7 +259,7 @@ public:
     dict entries;
     std::vector<SymEntry> entries_vector;
     
-    StackEntry(FrameType frame_type, bool in_loop, SymEntry &scope_func, long offset=0) {
+    StackEntry(FrameType frame_type, bool in_loop, SymEntry& scope_func, long offset=0) {
         this->frame_type = frame_type;
         inside_loop = in_loop;
         scope_func_entry = scope_func;
@@ -277,7 +272,7 @@ public:
     };
     
     ~StackEntry() = default;
-    StackEntry(StackEntry &) = default;
+    StackEntry(StackEntry& ) = default;
     StackEntry(StackEntry const&) = default;
     
     void newIdEntry(Symbol sym) {
@@ -317,7 +312,7 @@ public:
         entries.extract(search);
     }
     
-    friend std::ostream &operator<<(std::ostream &os, const StackEntry &frame) {
+    friend std::ostream& operator<<(std::ostream& os, const StackEntry& frame) {
         output::endScope();
         for (auto iter = frame.entries_vector.begin(); iter != frame.entries_vector.end(); iter++) {
             os << *(*iter);
@@ -340,9 +335,9 @@ public:
         Log() << "Frame_class::Constructor Done" << std::endl;
     };
     ~Frame_class() = default;
-    Frame_class(Frame_class &) = delete;
+    Frame_class(Frame_class&) = delete;
     
-    static Frame_class &getInstance();
+    static Frame_class& getInstance();
     
     // For IDs
     void newEntry(DeclType entry_type, std::string name, Type id_type) {
@@ -365,7 +360,7 @@ public:
     // For IDs
     void newFrame(FrameType frame_type) {
         Log() << "newFrame()" << std::endl;
-        auto &curr_frame = frames.back();
+        auto& curr_frame = frames.back();
         bool in_loop = (frame_type == FrameType::LOOP) || curr_frame.inside_loop;
         frames.emplace_back(frame_type, in_loop, curr_frame.scope_func_entry, curr_frame.next_offset);
     }
@@ -403,7 +398,7 @@ public:
     }
     
     void removeEntryFromCurrentScope(std::string name) {
-        auto &scope = frames.back();
+        auto& scope = frames.back();
         scope.removeEntry(name);
     }
     bool inLoop() {
@@ -434,12 +429,13 @@ public:
     NodeVector children;
 
 /////////// Methods ///////////
+    // We pass the c'tor a vecotr of the node's children, and set them up
     Generic_Node(NodeVector children) {
         setChildren(children);
     }
     
     ~Generic_Node() = default;
-    Generic_Node(Generic_Node &) = delete;
+    Generic_Node(Generic_Node&) = delete;
     
     void setChildren(NodeVector vector) {
         for (int index = 0; index < vector.size(); index++) {
@@ -451,8 +447,8 @@ public:
         this->parent = parent;
     }
     
+    // So that sub classes are polymorphic, and dynamic casting would work in the 'cpp' file, we need a virtual function
     virtual void stam() {};
-    
 };
 
 class Node_Program : public Generic_Node {
@@ -461,9 +457,10 @@ public:
     Node_Program(Node_FuncsList* node_funcsList);
     
     ~Node_Program() = default;
-    Node_Program(Node_Program &) = delete;
+    Node_Program(Node_Program&) = delete;
 };
 
+// Represents *all* tokens/terminals
 class Node_Token : public Generic_Node {
 public:
     std::string value;
@@ -475,7 +472,7 @@ public:
     }
     
     ~Node_Token() = default;
-    Node_Token(Node_Token &) = delete;
+    Node_Token(Node_Token&) = delete;
 };
 
 class Node_RetType : public Generic_Node {
@@ -489,7 +486,7 @@ public:
     
     ~Node_RetType() = default;
     
-    Node_RetType(Node_RetType &) = delete;
+    Node_RetType(Node_RetType&) = delete;
     
     void set_type(Type new_type) {
         type = new_type;
@@ -505,7 +502,7 @@ public:
     
     ~Node_FormalDecl() = default;
     
-    Node_FormalDecl(Node_FormalDecl &) = delete;
+    Node_FormalDecl(Node_FormalDecl&) = delete;
 };
 
 class Node_FormalsList : public Generic_Node {
@@ -520,7 +517,7 @@ public:
     
     ~Node_FormalsList() = default;
     
-    Node_FormalsList(Node_FormalsList &) = delete;
+    Node_FormalsList(Node_FormalsList&) = delete;
 };
 
 class Node_Formals : public Generic_Node {
@@ -532,7 +529,18 @@ public:
     Node_Formals();
     
     ~Node_Formals() = default;
-    Node_Formals(Node_Formals &) = delete;
+    Node_Formals(Node_Formals&) = delete;
+};
+
+class Node_Override : public Generic_Node {
+public:
+    
+/////////// Methods ///////////
+    Node_Override(Node_Token* node_override);
+    Node_Override();
+
+    Node_Override(Node_Formals&) = delete;
+    ~Node_Override() = default;
 };
 
 
@@ -540,17 +548,16 @@ class Node_FuncDecl : public Generic_Node {
 public:
 /////////// Methods ///////////
     
-    Node_FuncDecl(Node_RetType* node_retType, Node_Token* node_id, Node_Token* node_lparen,
+    Node_FuncDecl(Node_Override* node_override, Node_RetType* node_retType, Node_Token* node_id, Node_Token* node_lparen,
                   Node_Formals* node_formals, Node_Token* node_rparen,
                   Node_Token* node_lbrace,
                   Node_Statement* node_statement, Node_Token* node_rbrace);
-    static void newFuncFrame(Node_RetType* node_retType, Node_Token* node_id, Node_Token* node_lparen,
+    static void newFuncFrame(Node_Override* node_override, Node_RetType* node_retType, Node_Token* node_id, Node_Token* node_lparen,
                       Node_Formals* node_formals, Node_Token* node_rparen);
     
     ~Node_FuncDecl() = default;
     
-    Node_FuncDecl(Node_FuncDecl &) = delete;
-    
+    Node_FuncDecl(Node_FuncDecl&) = delete;
 };
 
 class Node_FuncsList : public Generic_Node {
@@ -562,7 +569,7 @@ public:
     
     ~Node_FuncsList() = default;
     
-    Node_FuncsList(Node_FuncsList &) = delete;
+    Node_FuncsList(Node_FuncsList&) = delete;
     
 };
 
@@ -574,7 +581,7 @@ public:
     
     ~Node_Statement() = default;
     
-    Node_Statement(Node_Statement &) = delete;
+    Node_Statement(Node_Statement&) = delete;
     
     
 };
@@ -587,7 +594,7 @@ public:
     
     ~Node_StatementList() = default;
     
-    Node_StatementList(Node_StatementList &) = delete;
+    Node_StatementList(Node_StatementList&) = delete;
 };
 
 class Node_Exp : public Generic_Node {
@@ -601,7 +608,7 @@ public:
     
     ~Node_Exp() = default;
     
-    Node_Exp(Node_Exp &) = delete;
+    Node_Exp(Node_Exp&) = delete;
     
     void set_type(Type exp_type){
         type = exp_type;
@@ -627,7 +634,7 @@ public:
     
     ~Node_ExpList() = default;
     
-    Node_ExpList(Node_ExpList &) = delete;
+    Node_ExpList(Node_ExpList&) = delete;
     
     
 };
@@ -644,7 +651,7 @@ public:
     
     ~Node_Call() = default;
     
-    Node_Call(Node_Call &) = delete;
+    Node_Call(Node_Call&) = delete;
 };
 
 class Node_Exp_Type : public Node_Exp {
@@ -654,7 +661,7 @@ public:
     
     ~Node_Exp_Type() = default;
     
-    Node_Exp_Type(Node_Exp_Type &) = delete;;
+    Node_Exp_Type(Node_Exp_Type&) = delete;;
 };
 
 class Node_Exp_NUM : public Node_Exp {
@@ -674,7 +681,7 @@ public:
     
     ~Node_Exp_NUM() = default;
     
-    Node_Exp_NUM(Node_Exp_NUM &) = delete;
+    Node_Exp_NUM(Node_Exp_NUM&) = delete;
 };
 
 class Node_Exp_Binop : public Node_Exp {
@@ -698,7 +705,7 @@ public:
     
     ~Node_Exp_Binop() = default;
     
-    Node_Exp_Binop(Node_Exp_NUM &) = delete;
+    Node_Exp_Binop(Node_Exp_NUM&) = delete;
 };
 
 class Node_Exp_Relop : public Node_Exp {
@@ -709,7 +716,7 @@ public:
     
     ~Node_Exp_Relop() = default;
     
-    Node_Exp_Relop(Node_Exp_Relop &) = delete;
+    Node_Exp_Relop(Node_Exp_Relop&) = delete;
 };
 
 class Node_Exp_Cast : public Node_Exp {
@@ -720,7 +727,7 @@ public:
     
     ~Node_Exp_Cast() = default;
     
-    Node_Exp_Cast(Node_Exp_Relop &) = delete;
+    Node_Exp_Cast(Node_Exp_Relop&) = delete;
 };
 
 class Node_Exp_Str : public Node_Exp {
@@ -732,7 +739,7 @@ public:
     
     ~Node_Exp_Str() = default;
     
-    Node_Exp_Str(Node_Exp_Str &) = delete;
+    Node_Exp_Str(Node_Exp_Str&) = delete;
 };
 
 class Node_Exp_Bool : public Node_Exp {
@@ -745,7 +752,7 @@ public:
     Node_Exp_Bool(Node_Exp* node_exp);
     ~Node_Exp_Bool() = default;
     
-    Node_Exp_Bool(Node_Exp_Bool &) = delete;
+    Node_Exp_Bool(Node_Exp_Bool&) = delete;
 };
 
 class Node_Exp_ID : public Node_Exp {
@@ -754,7 +761,7 @@ public:
     
     Node_Exp_ID(Node_Token* node_token);
     ~Node_Exp_ID() = default;
-    Node_Exp_ID(Node_Exp_ID &) = delete;
+    Node_Exp_ID(Node_Exp_ID&) = delete;
 };
 
 class Node_Exp_Call : public Node_Exp {
@@ -771,7 +778,7 @@ public:
     
     ~Node_Exp_Call() = default;
     
-    Node_Exp_Call(Node_Exp_Call &) = delete;;
+    Node_Exp_Call(Node_Exp_Call&) = delete;;
 };
 
 class Node_Exp_IfElse : public Node_Exp {
@@ -805,7 +812,7 @@ public:
     
     ~Node_Exp_IfElse() = default;
     
-    Node_Exp_IfElse(Node_Exp_IfElse &) = delete;;
+    Node_Exp_IfElse(Node_Exp_IfElse&) = delete;;
 };
 
 class Node_Statement_Block : public Node_Statement {
@@ -815,7 +822,7 @@ public:
     
     ~Node_Statement_Block() = default;
     
-    Node_Statement_Block(Node_Statement_Block &) = delete;
+    Node_Statement_Block(Node_Statement_Block&) = delete;
 };
 
 class Node_Statement_ID_Decl : public Node_Statement {
@@ -831,7 +838,7 @@ public:
     
     ~Node_Statement_ID_Decl() = default;
     
-    Node_Statement_ID_Decl(Node_Statement_ID_Decl &) = delete;
+    Node_Statement_ID_Decl(Node_Statement_ID_Decl&) = delete;
 };
 
 class Node_Statement_ID_Assign : public Node_Statement {
@@ -843,7 +850,7 @@ public:
     
     ~Node_Statement_ID_Assign() = default;
     
-    Node_Statement_ID_Assign(Node_Statement_ID_Assign &) = delete;
+    Node_Statement_ID_Assign(Node_Statement_ID_Assign&) = delete;
 };
 
 class Node_Statement_Call : public Node_Statement {
@@ -854,7 +861,7 @@ public:
     
     ~Node_Statement_Call() = default;
     
-    Node_Statement_Call(Node_Statement_Call &) = delete;
+    Node_Statement_Call(Node_Statement_Call&) = delete;
 };
 
 class Node_Statement_Ret : public Node_Statement {
@@ -866,7 +873,7 @@ public:
     
     ~Node_Statement_Ret() = default;
     
-    Node_Statement_Ret(Node_Statement_Ret &) = delete;
+    Node_Statement_Ret(Node_Statement_Ret&) = delete;
 };
 
 class Node_Statement_IF : public Node_Statement {
@@ -883,7 +890,7 @@ public:
     
     ~Node_Statement_IF() = default;
     
-    Node_Statement_IF(Node_Statement_IF &) = delete;
+    Node_Statement_IF(Node_Statement_IF&) = delete;
 };
 
 class Node_Statement_While : public Node_Statement {
@@ -894,7 +901,7 @@ public:
     
     ~Node_Statement_While() = default;
     
-    Node_Statement_While(Node_Statement_While &) = delete;
+    Node_Statement_While(Node_Statement_While&) = delete;
 };
 
 class Node_Statement_LoopMod : public Node_Statement {
@@ -904,7 +911,7 @@ public:
     
     ~Node_Statement_LoopMod() = default;
     
-    Node_Statement_LoopMod(Node_Statement_LoopMod &) = delete;
+    Node_Statement_LoopMod(Node_Statement_LoopMod&) = delete;
 };
 
 //#define YYSTYPE Node
