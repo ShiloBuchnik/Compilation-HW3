@@ -69,7 +69,6 @@ static std::vector<std::string> typeToStrVector(std::vector<Type> vec){
     return str_vec;
 }
 
-
 //-----------------EXCEPTIONS-----------------//
 class AppaException : public std::exception {
 public:
@@ -224,6 +223,16 @@ public:
 };
 
 
+// Returns a vector of types, corresponding to the vector of parameters
+static std::vector<Type> paramsToTypeVec(std::vector<Symbol> parameter_list) {
+    std::vector<Type> type_vec;
+    for (auto iter = parameter_list.begin(); iter != parameter_list.end(); iter++){
+        type_vec.push_back(iter->type);
+    }
+    return type_vec;
+}
+
+
 class symTableEntry {
 public:
     Symbol symbol;
@@ -272,15 +281,6 @@ public:
     ~symTableEntryFunc() = default;
     symTableEntryFunc(symTableEntryFunc& entry) = default;
 
-    // Returns a vector of types, corresponding to the vector of parameters
-    std::vector<Type> paramsToTypeVec() const{
-        std::vector<Type> type_vec;
-        for (auto iter = parameter_list.begin(); iter != parameter_list.end(); iter++){
-            type_vec.push_back(iter->type);
-        }
-        return type_vec;
-    }
-
     void print() const override;
 };
 
@@ -324,6 +324,7 @@ public:
     }
     void addFuncParams(std::vector<Symbol> func_params);
     
+    // Finds an identifier in a SCOPE
     SymEntry find(std::string name) {
         Log() << "StackEntry::find(" << name <<")";
         auto search = entries.find(name);
@@ -379,24 +380,33 @@ public:
         }
         frames.back().newIdEntry(Symbol(id_type, name));
     }
-
-
-
-
-    // For functions - adds an entry in the current scope
+    // For functions - adds an entry in the global scope
     void newEntry(DeclType entry_type, std::string name, Type ret_type, std::vector<Symbol> func_params, bool is_override) {
         Log(10) << "newEntry(FUNC, " << name << ")" << std::endl;
-        SymEntry entry = find(name);
-        if (entry != nullptr) { // Means a function with the same name has already been defined - TODO: replace that with override logic
+
+
+        symTableEntryFunc* entry = dynamic_cast<symTableEntryFunc*>(find(name));
+        // Means a non-overriding function is defined with *same types* as non-overriden function
+
+        // Example: void foo(int a); int foo();
+        if ( entry && !entry->is_override && !is_override /* && (paramsToTypeVec(entry->parameter_list) == paramsToTypeVec(func_params))*/ ) {
             throw DefExc(yylineno, name);
         }
+        // Example: override int foo(int a); override int foo(int b);
+        if ( entry && entry->is_override && is_override && (paramsToTypeVec(entry->parameter_list) == paramsToTypeVec(func_params)) ){
+            throw DefExc(yylineno, name);
+        }
+        // Example: foo(int a); override foo();
+        if (entry && !entry->is_override && is_override){
+            throw FuncNoOverrideExc(yylineno, name);
+        }
+        // Example: override foo(int a); foo();
+        if (entry && entry->is_override && !is_override){
+            throw OverrideWithoutDeclarationExc(yylineno, name);
+        }
+
         frames.back().newFuncEntry(Symbol(ret_type, name), func_params, is_override);
     }
-
-
-
-
-
     // For IDs
     void newFrame(FrameType frame_type) {
         Log() << "newFrame()" << std::endl;
@@ -404,25 +414,27 @@ public:
         bool in_loop = (frame_type == FrameType::LOOP) || curr_frame.inside_loop;
         frames.emplace_back(frame_type, in_loop, curr_frame.scope_func_entry, curr_frame.next_offset);
     }
-    // For functions - adds a scope for a function
+    // For functions - adds the function parameters to its new entry
     void newFrame(FrameType frame_type, std::string scope_func) {
-        Log() << "newFrame(FUNC, " << scope_func << ")" << std::endl;
+        //Log() << "newFrame(FUNC, " << scope_func << ")" << std::endl;
+        
         SymEntry func_entry = find(scope_func);
         frames.emplace_back(frame_type, false, func_entry);
         frames.back().addFuncParams(dynamic_cast<symTableEntryFunc*>(func_entry)->parameter_list);
     }
     
-    
+    // Finds an identifier in the entire STACK of scopes
     SymEntry find(std::string name) {
-        Log() << "=========== frameManager::find(" << name <<") ";
+        //Log() << "=========== frameManager::find(" << name <<") ";
+
         for (auto iter = frames.rbegin(); iter != frames.rend(); iter++) {
-            SymEntry entry = iter->find(name);
+            SymEntry entry = iter->find(name); // Only occurance of StackEntry::find()
             if (entry != nullptr) {
-                Log() << " --> Yes ===========" << std::endl;
+                //Log() << " --> Yes ===========" << std::endl;
                 return entry;
             }
         }
-        Log() << " --> NO ===========" << std::endl;
+        //Log() << " --> NO ===========" << std::endl;
         return nullptr;
     }
     
@@ -803,10 +815,8 @@ class Node_Exp_Call : public Node_Exp {
 public:
     
     Node_Exp_Call(NodeVector children) : Node_Exp(children, Type::INVALID) {
-        ///TODO: check validity and update frame stack
         auto node_call = (Node_Call*)(children[0]);
-        //auto func_entry = (frame_manager.find(node_call->func_id.name));
-        ////assert(func_entry->valid);
+
         
         set_type(node_call->func_id.type);
     }
@@ -815,40 +825,6 @@ public:
     
     Node_Exp_Call(Node_Exp_Call&) = delete;;
 };
-
-/*class Node_Exp_IfElse : public Node_Exp {
-public:
-    
-    Node_Exp_IfElse(NodeVector children) : Node_Exp(children, Type::INVALID) {
-        ///TODO: check validity and update frame stack
-        auto exp1 = (Node_Exp*)(children[0]);
-        auto exp2 = (Node_Exp*)(children[3]);
-        auto exp3 = (Node_Exp*)(children[6]);
-        
-        if (!exp2->typeCheck({Type::BOOL})) {
-            throw MismatchExc(yylineno);
-        }
-        
-        if (exp1->type != exp3->type) {
-            if (exp1->typeCheck({Type::INT}) && exp3->typeCheck({Type::BYTE})) {
-                set_type(Type::INT);
-            }
-            else if (exp1->typeCheck({Type::BYTE}) && exp3->typeCheck({Type::INT})) {
-                set_type(Type::INT);
-            }
-            else {
-                throw MismatchExc(yylineno);
-            }
-        }
-        else {
-            set_type(exp1->type);
-        }
-    }
-    
-    ~Node_Exp_IfElse() = default;
-    
-    Node_Exp_IfElse(Node_Exp_IfElse&) = delete;;
-}; */
 
 class Node_Statement_Block : public Node_Statement {
 public:

@@ -170,7 +170,7 @@ void output::errorMainOverride(int lineno){
     cout << "line " << lineno << ": main is not allowed to be overridden" << endl;
 }
 
-
+// For EXPLICIT casts
 bool valid_cast(Type to, Type from){
     if (from == to){
         return true;
@@ -183,6 +183,7 @@ bool valid_cast(Type to, Type from){
     return false;
 }
 
+// For IMPLICIT casts
 bool valid_implicit_cast(Type to, Type from) {
     if (to == from) {
         return true;
@@ -216,7 +217,7 @@ void symTableEntryID::print() const{
 }
 
 void symTableEntryFunc::print() const{
-    std::vector<string> a = typeToStrVector(paramsToTypeVec());
+    std::vector<string> a = typeToStrVector(paramsToTypeVec(parameter_list));
     cout << symbol.name << " " << output::makeFunctionType(TypeToSTR(symbol.type),a) << " " << offset << std::endl;
 }
 
@@ -399,8 +400,9 @@ Node_Call::Node_Call(Node_Token* node_id, Node_Token* node_lparen,
         throw PrototypeMismatchExc(yylineno, func_id.name);
     }
 
-    for (int index = 0; index < func_entry->parameter_list.size(); index++){ // Checking match for each paramter
-        if (!valid_cast(func_entry->parameter_list[index].type, func_parameters[index])){
+    // Checking match for each paramter
+    for (int index = 0; index < func_entry->parameter_list.size(); index++){
+        if (!valid_implicit_cast(func_entry->parameter_list[index].type, func_parameters[index])){
             throw PrototypeMismatchExc(yylineno, func_id.name);
         }
     }
