@@ -11,7 +11,7 @@
 #include "iostream"
 
 //-----------------MISC-----------------//
-// For debugging
+// For debugging, disabled now
 static std::ostream dev_null{nullptr};
 #define Debug_LVL 0
 static std::ostream& Log(int level=90){
@@ -38,12 +38,16 @@ namespace output{
     void errorDef(int lineno, const std::string& id);
     void errorUndefFunc(int lineno, const std::string& id);
     void errorMismatch(int lineno);
-    void errorPrototypeMismatch(int lineno, const std::string& id, std::vector<std::string>& argTypes);
+    void errorPrototypeMismatch(int lineno, const std::string& id);
     void errorUnexpectedBreak(int lineno);
     void errorUnexpectedContinue(int lineno);
     void errorMainMissing();
     void errorByteTooLarge(int lineno, const std::string& value);
-    void printProductionRule(const int ruleno);
+    void errorFuncNoOverride(int lineno, const std::string& id);
+    void errorOverrideWithoutDeclaration(int lineno, const std::string& id);
+    void errorAmbiguousCall(int lineno, const std::string& id);
+    void errorMainOverride(int yylineno);
+    void printProductionRule(const int ruleno); // Ours
 }
 
 
@@ -121,8 +125,8 @@ public:
 
 class PrototypeMismatchExc : public AppaException {
 public:
-    PrototypeMismatchExc(long lineno, std::string& id, std::vector<std::string> param_types) : AppaException(lineno) {
-        output::errorPrototypeMismatch(lineno, id, param_types);
+    PrototypeMismatchExc(long lineno, std::string& id) : AppaException(lineno) {
+        output::errorPrototypeMismatch(lineno, id);
     };
 };
 
@@ -151,6 +155,34 @@ class ByteTooLargeExc : public AppaException {
 public:
     ByteTooLargeExc(long lineno, std::string& value) : AppaException(lineno) {
         output::errorByteTooLarge(lineno, value);
+    }
+};
+
+class FuncNoOverrideExc : public AppaException {
+public:
+    FuncNoOverrideExc(int lineno, const std::string& id) : AppaException(lineno) {
+        output::errorFuncNoOverride(lineno, id);
+    }
+};
+
+class OverrideWithoutDeclarationExc : public AppaException {
+public:
+    OverrideWithoutDeclarationExc(int lineno, const std::string& id) : AppaException(lineno) {
+        output::errorOverrideWithoutDeclaration(lineno, id);
+    }
+};
+
+class AmbiguousCallExc : public AppaException {
+public:
+    AmbiguousCallExc(int lineno, const std::string& id) : AppaException(lineno) {
+        output::errorAmbiguousCall(lineno, id);
+    }
+};
+
+class MainOverrideExc : public AppaException {
+public:
+    MainOverrideExc(int yylineno) : AppaException(yylineno) {
+        output::errorMainOverride(yylineno);
     }
 };
 
@@ -250,6 +282,7 @@ public:
     void print() const override;
 };
 
+// A scope frame has stack entries in it
 class StackEntry {
 public:
     long next_offset;
@@ -264,10 +297,9 @@ public:
         inside_loop = in_loop;
         scope_func_entry = scope_func;
         next_offset = offset;
+
         if (frame_type == FrameType::FUNC){
-            //next_offset = -dynamic_cast<symTableEntryFunc*>(scope_func_entry)->parameter_list.size();
             Log() << "StackEntry:: offset=" << next_offset << std::endl;
-            //addFuncParams(dynamic_cast<symTableEntryFunc*>(scope_func_entry)->parameter_list);
         }
     };
     
@@ -275,21 +307,18 @@ public:
     StackEntry(StackEntry& ) = default;
     StackEntry(StackEntry const&) = default;
     
-    void newIdEntry(Symbol sym) {
+    void newIdEntry(Symbol sym) { // ID
         auto entry = new symTableEntryID(sym, DeclType::VAR, next_offset);
         next_offset++;
         
         entries.insert({entry->symbol.name, entry});
         entries_vector.push_back(entry);
-        //entry->print();
     }
-    void newFuncEntry(Symbol sym, std::vector<Symbol> func_params) {
+    void newFuncEntry(Symbol sym, std::vector<Symbol> func_params) { // Function
         auto entry = new symTableEntryFunc(sym, DeclType::FUNC, 0, func_params);
-        //next_offset++;
         
         entries.insert({entry->symbol.name, entry});
         entries_vector.push_back(entry);
-        //entry->print();
     }
     void addFuncParams(std::vector<Symbol> func_params);
     
@@ -367,9 +396,7 @@ public:
     // For functions
     void newFrame(FrameType frame_type, std::string scope_func) {
         Log() << "newFrame(FUNC, " << scope_func << ")" << std::endl;
-        //assert(frame_type == FrameType::FUNC);
         SymEntry func_entry = find(scope_func);
-        //assert(func_entry != nullptr);
         frames.emplace_back(frame_type, false, func_entry);
         frames.back().addFuncParams(dynamic_cast<symTableEntryFunc*>(func_entry)->parameter_list);
     }
@@ -377,11 +404,9 @@ public:
     
     SymEntry find(std::string name) {
         Log() << "=========== frameManager::find(" << name <<") ";
-        //Log() << frames.back();
         for (auto iter = frames.rbegin(); iter != frames.rend(); iter++) {
             SymEntry entry = iter->find(name);
             if (entry != nullptr) {
-                //entry->print();
                 Log() << " --> Yes ===========" << std::endl;
                 return entry;
             }
@@ -392,7 +417,6 @@ public:
     
     void closeFrame(){
         Log() << "--- Closing Frame ---" << std::endl;
-        //assert(frames.size() >= 1);
         std::cout << frames.back();
         frames.pop_back();
     }
@@ -781,7 +805,7 @@ public:
     Node_Exp_Call(Node_Exp_Call&) = delete;;
 };
 
-class Node_Exp_IfElse : public Node_Exp {
+/*class Node_Exp_IfElse : public Node_Exp {
 public:
     
     Node_Exp_IfElse(NodeVector children) : Node_Exp(children, Type::INVALID) {
@@ -813,7 +837,7 @@ public:
     ~Node_Exp_IfElse() = default;
     
     Node_Exp_IfElse(Node_Exp_IfElse&) = delete;;
-};
+}; */
 
 class Node_Statement_Block : public Node_Statement {
 public:

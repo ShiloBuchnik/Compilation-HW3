@@ -133,8 +133,8 @@ void output::errorMismatch(int lineno){
     cout << "line " << lineno << ":" << " type mismatch" << endl;
 }
 
-void output::errorPrototypeMismatch(int lineno, const string& id, std::vector<string>& argTypes) {
-    cout << "line " << lineno << ": prototype mismatch, function " << id << " expects arguments " << typeListToString(argTypes) << endl;
+void output::errorPrototypeMismatch(int lineno, const string& id) {
+    cout << "line " << lineno << ": prototype mismatch, function " << id << endl;
 }
 
 void output::errorUnexpectedBreak(int lineno) {
@@ -151,6 +151,23 @@ void output::errorMainMissing() {
 
 void output::errorByteTooLarge(int lineno, const string& value) {
     cout << "line " << lineno << ": byte value " << value << " out of range" << endl;
+}
+
+
+void output::errorFuncNoOverride(int lineno, const string& id) {
+    cout << "line " << lineno << ": function " << id << " was declared before as non-override function" << endl;
+}
+
+void output::errorOverrideWithoutDeclaration(int lineno, const string& id) {
+    cout << "line " << lineno << ": function " << id << " attempt to override a function without declaring the current function as override" << endl;
+}
+
+void output::errorAmbiguousCall(int lineno, const string& id) {
+    cout << "line " << lineno << ": ambiguous call to overloaded function " << id << endl;
+}
+
+void output::errorMainOverride(int lineno){
+    cout << "line " << lineno << ": main is not allowed to be overridden" << endl;
 }
 
 
@@ -373,18 +390,18 @@ Node_Call::Node_Call(Node_Token* node_id, Node_Token* node_lparen,
     }
     
     func_id = Symbol(id_entry->symbol.type, id_entry->symbol.name);
-    func_parameters = node_expList->exp_list;
+    func_parameters = node_expList->exp_list; // Expected parameters
 
     // check if func prototype matches func call
     auto func_entry = dynamic_cast<symTableEntryFunc*>(id_entry);
     Log() << "Node_Call:: size1=" << func_entry->parameter_list.size() << "size2=" << func_parameters.size() <<std::endl;
-    if (func_entry->parameter_list.size() != func_parameters.size()){
-        throw PrototypeMismatchExc(yylineno, func_id.name, typeToStrVector(symbolToTypeVec(func_entry->parameter_list)));
+    if (func_entry->parameter_list.size() != func_parameters.size()){ // If the size doesn't match, we can already tell there's a mismatch
+        throw PrototypeMismatchExc(yylineno, func_id.name);
     }
 
-    for (int index = 0; index < func_entry->parameter_list.size(); index++){
+    for (int index = 0; index < func_entry->parameter_list.size(); index++){ // Checking match for each paramter
         if (!valid_cast(func_entry->parameter_list[index].type, func_parameters[index])){
-            throw PrototypeMismatchExc(yylineno, func_id.name, typeToStrVector(symbolToTypeVec(func_entry->parameter_list)));
+            throw PrototypeMismatchExc(yylineno, func_id.name);
         }
     }
 }
@@ -398,11 +415,11 @@ Node_Call::Node_Call(Node_Token* node_id, Node_Token* node_lparen, Node_Token* n
         throw UndDefFuncExc(yylineno, node_id->value);
     }
     func_id = Symbol(id_entry->symbol.type, id_entry->symbol.name);
-    func_parameters = {};
+    func_parameters = {}; // Expected parameters (none)
     // check if func prototype matches func call
     auto func_entry = dynamic_cast<symTableEntryFunc*>(id_entry);
-    if (func_entry->parameter_list.size() != func_parameters.size()){
-        throw PrototypeMismatchExc(yylineno, func_id.name, typeToStrVector(symbolToTypeVec(func_entry->parameter_list)));
+    if (func_entry->parameter_list.size() != func_parameters.size()){ // If the size doesn't match, there's a mismatch
+        throw PrototypeMismatchExc(yylineno, func_id.name);
     }   
 }
 
