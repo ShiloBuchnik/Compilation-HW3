@@ -4,15 +4,6 @@
 #include "parser.tab.hpp"
 #include "hw3_output.hpp"
 #include "iostream"
-
-std::string tokentype_str[] = {"TEST", "VOID", "INT", "BYTE",
-                 "B", "BOOL", "AND", "OR", 
-                 "NOT", "TRUE", "FALSE", "RETURN", 
-                 "IF", "ELSE", "WHILE", "BREAK", 
-                 "CONTINUE", "SC", "COMMA", "LPAREN", 
-                 "RPAREN", "LBRACE", "RBRACE", "ASSIGN", 
-                 "RELOP", "BINOP", "COMMENT", "ID", 
-                 "NUM", "STRING"};
 %}
 
 %option yylineno
@@ -30,6 +21,7 @@ token_int       (int)
 token_byte      (byte)
 token_b         (b)
 token_bool      (bool)
+token_override  (override)
 token_and       (and)
 token_or        (or)
 token_not       (not)
@@ -64,6 +56,7 @@ token_string    (\"([^\n\r\"\\]|\\[rnt"\\])+\")
 {token_byte}      yylval.NodeToken = (new Node_Token(yytext));return BYTE;
 {token_b}         yylval.NodeToken = (new Node_Token(yytext));return B;
 {token_bool}      yylval.NodeToken = (new Node_Token(yytext));return BOOL;
+{token_override}  yylval.NodeToken = (new Node_Token(yytext)); return OVERRIDE;
 {token_and}       yylval.NodeToken = (new Node_Token(yytext));return AND;
 {token_or}        yylval.NodeToken = (new Node_Token(yytext));return OR;
 {token_not}       yylval.NodeToken = (new Node_Token(yytext));return NOT;

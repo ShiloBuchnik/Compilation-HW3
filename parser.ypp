@@ -162,15 +162,10 @@ int yyerror(const char* message);
 int main(){
 	int token;
 	Frame_class::getInstance();
+    
     try {
-        while ((token = yyparse())) {
-		continue;
-
-	      //printf("%d %s %s\n", yylineno, token, yytext);
-		  //cout << yylineno << " " << tokentype_str[token] << " " << token_value.c_str() << endl;
-		  //flush(cout);
-
-        }
+        while ((token = yyparse())) continue;
+		
         if (Frame_class::getInstance().mainDeclared() == false){ // if 'main()' wasn't declared
             throw MainMissingExc();
         }

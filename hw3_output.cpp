@@ -290,11 +290,11 @@ Node_Formals::Node_Formals(Node_FormalsList* node_formalsList): Generic_Node({no
 /// ############################    Node_Override    ###########################///
 /// ############################################################################## ///
 Node_Override::Node_Override(): Generic_Node({}) {
-
+    is_override = false;
 }
 
 Node_Override::Node_Override(Node_Token* node_override): Generic_Node({node_override}) {
-
+    is_override = true;
 }
 
 
@@ -581,10 +581,15 @@ Node_FuncDecl::Node_FuncDecl(Node_Override* node_override, Node_RetType* node_re
      
 }
 
+// We add the function entry to current scope, and create a new scope/frame for that function
 void Node_FuncDecl::newFuncFrame(Node_Override* node_override, Node_RetType *node_retType, Node_Token *node_id, Node_Token *node_lparen,
                              Node_Formals *node_formals, Node_Token * node_rparen){
+    if (node_override->is_override && (node_id->value == "main")){ // Overriden main
+        throw MainOverrideExc(yylineno);
+    }
+
     Log() << "newFuncFrame:: " << node_id->value << std::endl;
-    frame_manager.newEntry(DeclType::FUNC, node_id->value, node_retType->type, node_formals->parameter_list);
+    frame_manager.newEntry(DeclType::FUNC, node_id->value, node_retType->type, node_formals->parameter_list, node_override->is_override);
     
     Log() << "newFuncFrame:: " << node_id->value << std::endl;
     frame_manager.newFrame(FrameType::FUNC, node_id->value);

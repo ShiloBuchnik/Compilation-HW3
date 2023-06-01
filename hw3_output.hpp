@@ -46,7 +46,7 @@ namespace output{
     void errorFuncNoOverride(int lineno, const std::string& id);
     void errorOverrideWithoutDeclaration(int lineno, const std::string& id);
     void errorAmbiguousCall(int lineno, const std::string& id);
-    void errorMainOverride(int yylineno);
+    void errorMainOverride(int yylineno); // DONE
     void printProductionRule(const int ruleno); // Ours
 }
 
@@ -262,10 +262,12 @@ public:
 class symTableEntryFunc : public symTableEntry {
 public:
     std::vector<Symbol> parameter_list;
+    bool is_override;
 
-    symTableEntryFunc(Symbol sym, DeclType entry_type, long entry_offset, std::vector<Symbol> func_params)
+    symTableEntryFunc(Symbol sym, DeclType entry_type, long entry_offset, std::vector<Symbol> func_params, bool is_override)
             : symTableEntry(sym, entry_type, entry_offset, true) {
         parameter_list = func_params;
+        this->is_override = is_override;
     }
     ~symTableEntryFunc() = default;
     symTableEntryFunc(symTableEntryFunc& entry) = default;
@@ -314,8 +316,8 @@ public:
         entries.insert({entry->symbol.name, entry});
         entries_vector.push_back(entry);
     }
-    void newFuncEntry(Symbol sym, std::vector<Symbol> func_params) { // Function
-        auto entry = new symTableEntryFunc(sym, DeclType::FUNC, 0, func_params);
+    void newFuncEntry(Symbol sym, std::vector<Symbol> func_params, bool is_override) { // Function
+        auto entry = new symTableEntryFunc(sym, DeclType::FUNC, 0, func_params, is_override);
         
         entries.insert({entry->symbol.name, entry});
         entries_vector.push_back(entry);
@@ -359,8 +361,8 @@ public:
         SymEntry a = new symTableEntryID(sym, DeclType::INVALID, 0);
         frames.emplace_back(FrameType::GLOBAL, false, a);
     
-        newEntry(DeclType::FUNC, "print", Type::VOID, {Symbol(Type::STRING, "str")});
-        newEntry(DeclType::FUNC, "printi", Type::VOID, {Symbol(Type::INT, "str")});
+        newEntry(DeclType::FUNC, "print", Type::VOID, {Symbol(Type::STRING, "str")}, false);
+        newEntry(DeclType::FUNC, "printi", Type::VOID, {Symbol(Type::INT, "str")}, false);
         Log() << "Frame_class::Constructor Done" << std::endl;
     };
     ~Frame_class() = default;
@@ -377,15 +379,24 @@ public:
         }
         frames.back().newIdEntry(Symbol(id_type, name));
     }
-    // For functions
-    void newEntry(DeclType entry_type, std::string name, Type ret_type, std::vector<Symbol> func_params) {
+
+
+
+
+    // For functions - adds an entry in the current scope
+    void newEntry(DeclType entry_type, std::string name, Type ret_type, std::vector<Symbol> func_params, bool is_override) {
         Log(10) << "newEntry(FUNC, " << name << ")" << std::endl;
         SymEntry entry = find(name);
-        if (entry != nullptr) {
+        if (entry != nullptr) { // Means a function with the same name has already been defined - TODO: replace that with override logic
             throw DefExc(yylineno, name);
         }
-        frames.back().newFuncEntry(Symbol(ret_type, name), func_params);
+        frames.back().newFuncEntry(Symbol(ret_type, name), func_params, is_override);
     }
+
+
+
+
+
     // For IDs
     void newFrame(FrameType frame_type) {
         Log() << "newFrame()" << std::endl;
@@ -393,7 +404,7 @@ public:
         bool in_loop = (frame_type == FrameType::LOOP) || curr_frame.inside_loop;
         frames.emplace_back(frame_type, in_loop, curr_frame.scope_func_entry, curr_frame.next_offset);
     }
-    // For functions
+    // For functions - adds a scope for a function
     void newFrame(FrameType frame_type, std::string scope_func) {
         Log() << "newFrame(FUNC, " << scope_func << ")" << std::endl;
         SymEntry func_entry = find(scope_func);
@@ -558,7 +569,8 @@ public:
 
 class Node_Override : public Generic_Node {
 public:
-    
+    bool is_override;
+
 /////////// Methods ///////////
     Node_Override(Node_Token* node_override);
     Node_Override();
@@ -594,7 +606,6 @@ public:
     ~Node_FuncsList() = default;
     
     Node_FuncsList(Node_FuncsList&) = delete;
-    
 };
 
 class Node_Statement : public Generic_Node {
