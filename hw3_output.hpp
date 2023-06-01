@@ -46,7 +46,7 @@ namespace output{
     void errorFuncNoOverride(int lineno, const std::string& id);
     void errorOverrideWithoutDeclaration(int lineno, const std::string& id);
     void errorAmbiguousCall(int lineno, const std::string& id);
-    void errorMainOverride(int yylineno); // DONE
+    void errorMainOverride(int yylineno);
     void printProductionRule(const int ruleno); // Ours
 }
 
@@ -199,7 +199,7 @@ class Node_FuncsList;
 typedef Generic_Node* Node;
 typedef std::vector<Node> NodeVector;
 typedef symTableEntry* SymEntry;
-typedef std::map<std::string, SymEntry> dict;
+typedef std::multimap<std::string, SymEntry> dict;
 typedef std::vector<StackEntry> frame;
 
 //-----------------SCOPE CLASSES-----------------//
@@ -316,18 +316,20 @@ public:
         entries.insert({entry->symbol.name, entry});
         entries_vector.push_back(entry);
     }
-    void newFuncEntry(Symbol sym, std::vector<Symbol> func_params, bool is_override) { // Function
-        auto entry = new symTableEntryFunc(sym, DeclType::FUNC, 0, func_params, is_override);
+    symTableEntryFunc* newFuncEntry(Symbol sym, std::vector<Symbol> func_params, bool is_override) { // Function
+        symTableEntryFunc* entry = new symTableEntryFunc(sym, DeclType::FUNC, 0, func_params, is_override);
         
         entries.insert({entry->symbol.name, entry});
         entries_vector.push_back(entry);
+
+        return entry;
     }
     void addFuncParams(std::vector<Symbol> func_params);
     
     // Finds an identifier in a SCOPE
     SymEntry find(std::string name) {
         Log() << "StackEntry::find(" << name <<")";
-        auto search = entries.find(name);
+        auto search = entries.find(name); // builtin find() for STL dictionary
         
         if (search == entries.end()) {
             Log() << " -> NO" << std::endl;
@@ -335,13 +337,6 @@ public:
         }
         Log() << " -> YES" << std::endl;
         return search->second;
-    }
-    void removeEntry(std::string name) {
-        auto search = entries.find(name);
-        if (search == entries.end()) {
-            return;
-        }
-        entries.extract(search);
     }
     
     friend std::ostream& operator<<(std::ostream& os, const StackEntry& frame) {
@@ -362,8 +357,8 @@ public:
         SymEntry a = new symTableEntryID(sym, DeclType::INVALID, 0);
         frames.emplace_back(FrameType::GLOBAL, false, a);
     
-        newEntry(DeclType::FUNC, "print", Type::VOID, {Symbol(Type::STRING, "str")}, false);
-        newEntry(DeclType::FUNC, "printi", Type::VOID, {Symbol(Type::INT, "str")}, false);
+        frames.back().newFuncEntry(Symbol(Type::VOID, "print"), {Symbol(Type::STRING, "str")}, false);
+        frames.back().newFuncEntry(Symbol(Type::VOID, "printi"), {Symbol(Type::INT, "str")}, false);
         Log() << "Frame_class::Constructor Done" << std::endl;
     };
     ~Frame_class() = default;
@@ -372,24 +367,19 @@ public:
     static Frame_class& getInstance();
     
     // For IDs
-    void newEntry(DeclType entry_type, std::string name, Type id_type) {
+    void newEntryID(std::string name, Type id_type) {
         Log(10) << "newEntry(ID, " << name << ")" << std::endl;
-        SymEntry entry = find(name);
+        SymEntry entry = findID(name);
         if (entry != nullptr) {
             throw DefExc(yylineno, name);
         }
         frames.back().newIdEntry(Symbol(id_type, name));
     }
-    // For functions - adds an entry in the global scope
-    void newEntry(DeclType entry_type, std::string name, Type ret_type, std::vector<Symbol> func_params, bool is_override) {
-        Log(10) << "newEntry(FUNC, " << name << ")" << std::endl;
 
-
-        symTableEntryFunc* entry = dynamic_cast<symTableEntryFunc*>(find(name));
-        // Means a non-overriding function is defined with *same types* as non-overriden function
-
-        // Example: void foo(int a); int foo();
-        if ( entry && !entry->is_override && !is_override /* && (paramsToTypeVec(entry->parameter_list) == paramsToTypeVec(func_params))*/ ) {
+    /*// For functions - adds an entry in the global scope
+    void newEntryFunction(std::string name, Type ret_type, std::vector<Symbol> func_params, bool is_override) {
+        /* // Example: void foo(int a); int foo();
+        if ( entry && !entry->is_override && !is_override ) {
             throw DefExc(yylineno, name);
         }
         // Example: override int foo(int a); override int foo(int b);
@@ -406,36 +396,56 @@ public:
         }
 
         frames.back().newFuncEntry(Symbol(ret_type, name), func_params, is_override);
-    }
-    // For IDs
+    } */
+
+
+    // For ID
     void newFrame(FrameType frame_type) {
         Log() << "newFrame()" << std::endl;
-        auto& curr_frame = frames.back();
+        auto &curr_frame = frames.back();
         bool in_loop = (frame_type == FrameType::LOOP) || curr_frame.inside_loop;
         frames.emplace_back(frame_type, in_loop, curr_frame.scope_func_entry, curr_frame.next_offset);
     }
-    // For functions - adds the function parameters to its new entry
+
+    /*// For functions - adds the function parameters to its new entry
     void newFrame(FrameType frame_type, std::string scope_func) {
-        //Log() << "newFrame(FUNC, " << scope_func << ")" << std::endl;
-        
-        SymEntry func_entry = find(scope_func);
+        SymEntry func_entry = findFunction(scope_func);
         frames.emplace_back(frame_type, false, func_entry);
         frames.back().addFuncParams(dynamic_cast<symTableEntryFunc*>(func_entry)->parameter_list);
-    }
+    } */
     
-    // Finds an identifier in the entire STACK of scopes
-    SymEntry find(std::string name) {
-        //Log() << "=========== frameManager::find(" << name <<") ";
-
+    // Finds an ID in the entire STACK of scopes
+    SymEntry findID(std::string name) {
         for (auto iter = frames.rbegin(); iter != frames.rend(); iter++) {
-            SymEntry entry = iter->find(name); // Only occurance of StackEntry::find()
-            if (entry != nullptr) {
-                //Log() << " --> Yes ===========" << std::endl;
-                return entry;
-            }
+            SymEntry entry = iter->find(name); // Occurance of StackEntry::find()
+            if (entry != nullptr) return entry;
         }
-        //Log() << " --> NO ===========" << std::endl;
         return nullptr;
+    }
+
+    // Finds a function in the entire STACK of scopes
+    std::vector<symTableEntryFunc*> findFunction(std::string name) {
+        StackEntry global_scope = frames[0];
+        std::vector<symTableEntryFunc*> matching_funcs = {};
+
+        for (auto& pair : global_scope.entries){ // Finding all of the functions with the same name
+            symTableEntryFunc* entry = dynamic_cast<symTableEntryFunc*>(pair.second);
+            if (name == entry->symbol.name) matching_funcs.push_back(entry);
+        }
+
+        return matching_funcs;
+
+        /*for (auto& pair : global_scope.entries){
+            symTableEntryFunc* entry = dynamic_cast<symTableEntryFunc*>(pair.second);
+            std::vector<Type> pair_type_vec = paramsToTypeVec(entry->parameter_list);
+            if (name == entry->symbol.name && type_vec == pair_type_vec) return entry;
+        }
+
+        for (auto& pair : global_scope.entries){
+            symTableEntryFunc* entry = dynamic_cast<symTableEntryFunc*>(pair.second);
+            std::vector<Type> pair_type_vec = paramsToTypeVec(entry->parameter_list);
+            if ( name == entry->symbol.name && (pair_type_vec.size() == type_vec.size()) && valid_implicit_cast_vec(pair_type_vec, type_vec) ) return entry;
+        } */
     }
     
     void closeFrame(){
@@ -444,10 +454,10 @@ public:
         frames.pop_back();
     }
     
-    void removeEntryFromCurrentScope(std::string name) {
+    /*void removeEntryFromCurrentScope(std::string name) {
         auto& scope = frames.back();
         scope.removeEntry(name);
-    }
+    }*/
     bool inLoop() {
         return frames.back().inside_loop;
     }
@@ -456,10 +466,12 @@ public:
     }
     
     bool mainDeclared(){
-        symTableEntryFunc* main_entry = dynamic_cast<symTableEntryFunc*>(find("main"));
-        if (main_entry == nullptr){
+        std::vector <symTableEntryFunc*> matching_function = findFunction("main");
+        if (matching_function.empty()){
             return false;
         }
+
+        symTableEntryFunc* main_entry = matching_function[0];
         if (main_entry->symbol.type != Type::VOID || main_entry->parameter_list.size() != 0){
             return false;
         }
