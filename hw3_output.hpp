@@ -185,7 +185,7 @@ public:
     }
 };
 
-//-----------------CLASSES-----------------//
+//-----------------FORWARD DECLARATION AND TYPEDEFS-----------------//
 class Generic_Node;
 class symTableEntry;
 class StackEntry;
@@ -309,7 +309,7 @@ public:
     StackEntry(StackEntry& ) = default;
     StackEntry(StackEntry const&) = default;
     
-    void newIdEntry(Symbol sym) { // ID
+    void newIdEntry(Symbol sym) {
         auto entry = new symTableEntryID(sym, DeclType::VAR, next_offset);
         next_offset++;
         
@@ -366,7 +366,6 @@ public:
     
     static Frame_class& getInstance();
     
-    // For IDs
     void newEntryID(std::string name, Type id_type) {
         Log(10) << "newEntry(ID, " << name << ")" << std::endl;
         SymEntry entry = findID(name);
@@ -376,48 +375,17 @@ public:
         frames.back().newIdEntry(Symbol(id_type, name));
     }
 
-    /*// For functions - adds an entry in the global scope
-    void newEntryFunction(std::string name, Type ret_type, std::vector<Symbol> func_params, bool is_override) {
-        /* // Example: void foo(int a); int foo();
-        if ( entry && !entry->is_override && !is_override ) {
-            throw DefExc(yylineno, name);
-        }
-        // Example: override int foo(int a); override int foo(int b);
-        if ( entry && entry->is_override && is_override && (paramsToTypeVec(entry->parameter_list) == paramsToTypeVec(func_params)) ){
-            throw DefExc(yylineno, name);
-        }
-        // Example: foo(int a); override foo();
-        if (entry && !entry->is_override && is_override){
-            throw FuncNoOverrideExc(yylineno, name);
-        }
-        // Example: override foo(int a); foo();
-        if (entry && entry->is_override && !is_override){
-            throw OverrideWithoutDeclarationExc(yylineno, name);
-        }
-
-        frames.back().newFuncEntry(Symbol(ret_type, name), func_params, is_override);
-    } */
-
-
-    // For ID
     void newFrame(FrameType frame_type) {
         Log() << "newFrame()" << std::endl;
-        auto &curr_frame = frames.back();
+        auto& curr_frame = frames.back();
         bool in_loop = (frame_type == FrameType::LOOP) || curr_frame.inside_loop;
         frames.emplace_back(frame_type, in_loop, curr_frame.scope_func_entry, curr_frame.next_offset);
     }
-
-    /*// For functions - adds the function parameters to its new entry
-    void newFrame(FrameType frame_type, std::string scope_func) {
-        SymEntry func_entry = findFunction(scope_func);
-        frames.emplace_back(frame_type, false, func_entry);
-        frames.back().addFuncParams(dynamic_cast<symTableEntryFunc*>(func_entry)->parameter_list);
-    } */
     
     // Finds an ID in the entire STACK of scopes
     SymEntry findID(std::string name) {
         for (auto iter = frames.rbegin(); iter != frames.rend(); iter++) {
-            SymEntry entry = iter->find(name); // Occurance of StackEntry::find()
+            SymEntry entry = iter->find(name); // StackEntry::find()
             if (entry != nullptr) return entry;
         }
         return nullptr;
@@ -434,18 +402,6 @@ public:
         }
 
         return matching_funcs;
-
-        /*for (auto& pair : global_scope.entries){
-            symTableEntryFunc* entry = dynamic_cast<symTableEntryFunc*>(pair.second);
-            std::vector<Type> pair_type_vec = paramsToTypeVec(entry->parameter_list);
-            if (name == entry->symbol.name && type_vec == pair_type_vec) return entry;
-        }
-
-        for (auto& pair : global_scope.entries){
-            symTableEntryFunc* entry = dynamic_cast<symTableEntryFunc*>(pair.second);
-            std::vector<Type> pair_type_vec = paramsToTypeVec(entry->parameter_list);
-            if ( name == entry->symbol.name && (pair_type_vec.size() == type_vec.size()) && valid_implicit_cast_vec(pair_type_vec, type_vec) ) return entry;
-        } */
     }
     
     void closeFrame(){
@@ -454,10 +410,6 @@ public:
         frames.pop_back();
     }
     
-    /*void removeEntryFromCurrentScope(std::string name) {
-        auto& scope = frames.back();
-        scope.removeEntry(name);
-    }*/
     bool inLoop() {
         return frames.back().inside_loop;
     }
@@ -641,8 +593,6 @@ public:
     ~Node_Statement() = default;
     
     Node_Statement(Node_Statement&) = delete;
-    
-    
 };
 
 class Node_StatementList : public Generic_Node {
@@ -694,8 +644,6 @@ public:
     ~Node_ExpList() = default;
     
     Node_ExpList(Node_ExpList&) = delete;
-    
-    
 };
 
 class Node_Call : public Generic_Node {
@@ -748,7 +696,6 @@ public:
 
 /////////// Methods ///////////
     Node_Exp_Binop(NodeVector children) : Node_Exp(children, Type::INT) {
-        //Todo: if bool, update type
         auto exp1 = (Node_Exp*)(children[0]);
         auto binop = (Node_Token*)(children[1]);
         auto exp2 = (Node_Exp*)(children[2]);
@@ -759,11 +706,9 @@ public:
         if (exp1->type == Type::BYTE && exp2->type == Type::BYTE) {
             set_type(Type::BYTE);
         }
-        
     }
     
     ~Node_Exp_Binop() = default;
-    
     Node_Exp_Binop(Node_Exp_NUM&) = delete;
 };
 
@@ -936,25 +881,5 @@ public:
     
     Node_Statement_LoopMod(Node_Statement_LoopMod&) = delete;
 };
-
-//#define YYSTYPE Node
-    
-
-/*
-struct YYSTYPE {
-    Generic_Node * ProgramNode;
-    Node_Token * NodeToken;
-    Node_RetType * NodeRetType;
-    Node_FormalDecl * NodeFormalDecl;
-    Node_FormalsList * NodeFormalsList;
-    Node_FuncDecl * NodeFuncDecl;
-    Node_FuncsList * NodeFuncsList;
-    Node_Statement * NodeStatement;
-    Node_StatementList * NodeStatementList;
-    Node_Exp * NodeExp;
-    Node_ExpList * NodeExpList;
-    Node_Call * NodeCall;
-};
-*/
 
 #endif

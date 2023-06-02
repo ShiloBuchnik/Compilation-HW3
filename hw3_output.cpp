@@ -85,7 +85,7 @@ bool valid_implicit_cast(Type to, Type from) {
 }
 
 // For IMPLICIT casts, but checking for a vector
-static bool valid_implicit_cast_vec(std::vector<Type> to, std::vector<Type> from) {
+bool valid_implicit_cast_vec(std::vector<Type> to, std::vector<Type> from) {
     for (int i = 0; i < to.size(); i++){
         if (valid_implicit_cast(to[i], from[i]) == false) return false;
     }
@@ -253,7 +253,7 @@ Node_ExpList::Node_ExpList(Node_Exp* node_exp, Node_Token* node_token,
 Node_FormalDecl::Node_FormalDecl(Node_Exp* node_type, Node_Token* node_token_id)
                 : Generic_Node({node_type, node_token_id}), id_symbol(node_type->type, node_token_id->value){
     
-    if (frame_manager.findID(id_symbol.name) != nullptr){ // For ID
+    if (frame_manager.findID(id_symbol.name) != nullptr){
         throw DefExc(yylineno, id_symbol.name);
     }
     
@@ -312,7 +312,7 @@ Node_Override::Node_Override(Node_Token* node_override): Generic_Node({node_over
 
 Node_Exp_ID::Node_Exp_ID(Node_Token* node_token) : Node_Exp({node_token}, Type::INVALID), id(Symbol::invalidSymbol()) {
     Log() << "Node_Exp_ID(" << node_token->value << ")"  << std::endl;
-    auto entry = frame_manager.findID(node_token->value); // For ID
+    auto entry = frame_manager.findID(node_token->value);
     if (entry == nullptr) {
         Log() << "Node_Exp_ID()::UndefExc" << std::endl;
         throw UndefExc(yylineno, node_token->value);
@@ -330,23 +330,23 @@ Node_Exp_ID::Node_Exp_ID(Node_Token* node_token) : Node_Exp({node_token}, Type::
 /// ############################    Node_Exp_Bool    ############################///
 /// ############################################################################## ///
 
-Node_Exp_Bool::Node_Exp_Bool(Node_Token *node_token) : Node_Exp({node_token},Type::BOOL){
+Node_Exp_Bool::Node_Exp_Bool(Node_Token* node_token) : Node_Exp({node_token},Type::BOOL){
 }
 
-Node_Exp_Bool::Node_Exp_Bool(Node_Token *node_not, Node_Exp *node_exp) : Node_Exp({node_not, node_exp},Type::BOOL){
+Node_Exp_Bool::Node_Exp_Bool(Node_Token* node_not, Node_Exp* node_exp) : Node_Exp({node_not, node_exp},Type::BOOL){
     if (!node_exp->typeCheck({Type::BOOL})){
         throw MismatchExc(yylineno);
     }
 }
 
-Node_Exp_Bool::Node_Exp_Bool(Node_Exp *node_exp1, Node_Token *node_AndOR, Node_Exp *node_exp2)
+Node_Exp_Bool::Node_Exp_Bool(Node_Exp* node_exp1, Node_Token* node_AndOR, Node_Exp* node_exp2)
                                 : Node_Exp({node_exp1, node_AndOR, node_exp2}, Type::BOOL){
     if (!node_exp1->typeCheck({Type::BOOL}) || !node_exp2->typeCheck({Type::BOOL})){
         throw MismatchExc(yylineno);
     }
 }
 
-Node_Exp_Bool::Node_Exp_Bool(Node_Exp *node_exp) : Node_Exp({node_exp}, node_exp->type){
+Node_Exp_Bool::Node_Exp_Bool(Node_Exp* node_exp) : Node_Exp({node_exp}, node_exp->type){
     Log() << "ExpBool Reduced" << std::endl;
     if (!node_exp->typeCheck({Type::BOOL})){
         throw MismatchExc(yylineno);
@@ -393,7 +393,7 @@ Node_Call::Node_Call(Node_Token* node_id, Node_Token* node_lparen,
     func_parameters = node_expList->exp_list; // Expected parameters
 
     // check if func declared
-    vector<symTableEntryFunc*> matching_functions = frame_manager.findFunction(node_id->value); // For function
+    vector<symTableEntryFunc*> matching_functions = frame_manager.findFunction(node_id->value);
     if (matching_functions.empty()) throw UndDefFuncExc(yylineno, node_id->value);
 
     // If we got here, then there exist function(s) with the same name
@@ -410,25 +410,6 @@ Node_Call::Node_Call(Node_Token* node_id, Node_Token* node_lparen,
         if (matching == 0) throw PrototypeMismatchExc(yylineno, node_id->value);
         else if (matching == 1) func_id = chosen_func->symbol;
         else throw AmbiguousCallExc(yylineno, node_id->value);
-
-    /*if (id_entry == nullptr || id_entry->entry_type != DeclType::FUNC){
-        throw UndDefFuncExc(yylineno, node_id->value);
-    }
-    
-    func_id = Symbol(id_entry->symbol.type, id_entry->symbol.name);
-
-    // check if func prototype matches func call
-    auto func_entry = dynamic_cast<symTableEntryFunc*>(id_entry);
-    if (func_entry->parameter_list.size() != func_parameters.size()){ // If the size doesn't match, we can already tell there's a mismatch
-        throw PrototypeMismatchExc(yylineno, func_id.name);
-    }
-
-    // Checking match for each paramter
-    for (int index = 0; index < func_entry->parameter_list.size(); index++){
-        if (!valid_implicit_cast(func_entry->parameter_list[index].type, func_parameters[index])){
-            throw PrototypeMismatchExc(yylineno, func_id.name);
-        }
-    } */
 }
 
 // Call without parameters
@@ -437,7 +418,7 @@ Node_Call::Node_Call(Node_Token* node_id, Node_Token* node_lparen, Node_Token* n
 
     // check if func declared
     func_parameters = {}; // Expected parameters (none)
-    vector<symTableEntryFunc*> matching_functions = frame_manager.findFunction(node_id->value); // For function
+    vector<symTableEntryFunc*> matching_functions = frame_manager.findFunction(node_id->value);
     if (matching_functions.empty()) throw UndDefFuncExc(yylineno, node_id->value);
 
 
@@ -455,21 +436,6 @@ Node_Call::Node_Call(Node_Token* node_id, Node_Token* node_lparen, Node_Token* n
         if (matching == 0) throw PrototypeMismatchExc(yylineno, node_id->value);
         else if (matching == 1) func_id = chosen_func->symbol;
         else throw AmbiguousCallExc(yylineno, node_id->value);
-
-
-    /*// check if func declared
-    auto id_entry = frame_manager.find(node_id->value, DeclType::FUNC, {}); // For function
-    if (id_entry == nullptr || id_entry->entry_type != DeclType::FUNC){
-        throw UndDefFuncExc(yylineno, node_id->value);
-    }
-
-    func_id = Symbol(id_entry->symbol.type, id_entry->symbol.name);
-    func_parameters = {}; // Expected parameters (none)
-
-    // check if func prototype matches func call
-    auto func_entry = dynamic_cast<symTableEntryFunc*>(id_entry);
-    if (func_entry->parameter_list.size() != func_parameters.size()){ // If the size doesn't match, there's a mismatch
-        throw PrototypeMismatchExc(yylineno, func_id.name); */
     }
 
 
@@ -484,7 +450,7 @@ Node_Statement::Node_Statement(NodeVector children): Generic_Node(children) {
 /// ############################    Node_Statement_ID_Decl    ############################///
 /// ############################################################################## ///
 
-Node_Statement_ID_Decl::Node_Statement_ID_Decl(Node_Exp *node_type,
+Node_Statement_ID_Decl::Node_Statement_ID_Decl(Node_Exp* node_type,
                                                Node_Token* node_token,
                                                Node_Token* node_sc)
                                                : Node_Statement({node_type, node_token, node_sc}) {
@@ -502,7 +468,6 @@ Node_Statement_ID_Decl::Node_Statement_ID_Decl(Node_Exp* node_type,
     frame_manager.newEntryID(node_token->value, node_type_p->type);
     
     if (!valid_implicit_cast(node_type_p->type, node_exp->type)){
-        //frame_manager.removeEntryFromCurrentScope(node_token->value);
         throw MismatchExc(yylineno);
     }
     Log() << "Node_Statement_ID_Decl:: " << TypeToSTR(node_type->type) << " " << node_token->value << std::endl;
@@ -519,7 +484,7 @@ Node_Statement_ID_Assign::Node_Statement_ID_Assign(Node_Token* node_id,
                                                    Node_Token* node_sc)
                                                    : Node_Statement({node_id, node_assign, node_exp, node_sc}) {
     
-    auto id_entry = frame_manager.findID(node_id->value); // For ID
+    auto id_entry = frame_manager.findID(node_id->value);
     if (id_entry == nullptr || id_entry->entry_type != DeclType::VAR){
         throw UndefExc(yylineno, node_id->value);
     }
@@ -567,8 +532,8 @@ Node_Statement_Ret::Node_Statement_Ret(Node_Token* node_ret, Node_Exp* node_exp,
 /// ############################    Node_Statement_IF    ############################///
 /// ############################################################################## ///
 
-Node_Statement_IF::Node_Statement_IF(Node_Token *node_if, Node_Token *node_lparen, Node_Exp *node_exp,
-                                     Node_Token *node_rparen, Node_Statement *node_statement)
+Node_Statement_IF::Node_Statement_IF(Node_Token* node_if, Node_Token* node_lparen, Node_Exp* node_exp,
+                                     Node_Token* node_rparen, Node_Statement* node_statement)
                                      : Node_Statement({node_if, node_lparen, node_exp, node_rparen, node_statement}){
     
     if (node_exp->typeCheck({Type::BOOL}) == false){
@@ -576,9 +541,9 @@ Node_Statement_IF::Node_Statement_IF(Node_Token *node_if, Node_Token *node_lpare
     }
 }
 
-Node_Statement_IF::Node_Statement_IF(Node_Token *node_if, Node_Token *node_lparen, Node_Exp *node_exp,
-                                     Node_Token *node_rparen, Node_Statement *node_statement1, Node_Token *node_else,
-                                     Node_Statement *node_statement2)
+Node_Statement_IF::Node_Statement_IF(Node_Token* node_if, Node_Token* node_lparen, Node_Exp* node_exp,
+                                     Node_Token* node_rparen, Node_Statement* node_statement1, Node_Token* node_else,
+                                     Node_Statement* node_statement2)
                                      :  Node_Statement({node_if, node_lparen, node_exp, node_rparen, node_statement1, node_else, node_statement2}){
     
     if (node_exp->typeCheck({Type::BOOL}) == false){
@@ -631,8 +596,8 @@ Node_FuncDecl::Node_FuncDecl(Node_Override* node_override, Node_RetType* node_re
 }
 
 // We add the function entry to current scope, and create a new scope/frame for that function
-void Node_FuncDecl::newFuncFrame(Node_Override* node_override, Node_RetType *node_retType, Node_Token *node_id, Node_Token *node_lparen,
-                             Node_Formals *node_formals, Node_Token * node_rparen){
+void Node_FuncDecl::newFuncFrame(Node_Override* node_override, Node_RetType* node_retType, Node_Token* node_id, Node_Token* node_lparen,
+                             Node_Formals* node_formals, Node_Token*  node_rparen){
     if (node_override->is_override && (node_id->value == "main")){ // Overriden main
         throw MainOverrideExc(yylineno);
     }
@@ -672,7 +637,7 @@ void StackEntry::addFuncParams(std::vector<Symbol> func_params){
     int offset = next_offset-1;
 
     for (auto iter = func_params.begin(); iter != func_params.end(); iter++){
-        if (frame_manager.findID(iter->name) != nullptr){ // For ID
+        if (frame_manager.findID(iter->name) != nullptr){
             throw DefExc(yylineno, iter->name);
         }
 

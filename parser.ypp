@@ -8,10 +8,8 @@ extern int yylex();
 int yyerror(const char* message);
 
 #define NewNode(attr, children) $$ = createNode(); $$->setAttributes(attr); $$->setChildren(children);
-#define Cast(obj, Type) (std::static_pointer_cast<TYPE>(obj))
 %}
 
-// maybe delete this?
 %code requires{
     #include "hw3_output.hpp"
 }
@@ -98,15 +96,9 @@ int yyerror(const char* message);
     Program: Funcs                                                              {$$ = new Node_Program($1);output::printProductionRule(1);};
     Funcs: /*epsilon*/                                                          %empty {$$ = new Node_FuncsList({});output::printProductionRule(2);};
     Funcs: FuncDecl Funcs                                                       {$$ = new Node_FuncsList({$1,$2});output::printProductionRule(3);};
-
-
-
     FuncDecl: OverRide RetType ID LPAREN Formals RPAREN {Node_FuncDecl::newFuncFrame($1,$2,$3,$4,$5,$6);}  LBRACE Statements RBRACE  {$$ = new Node_FuncDecl($1,$2,$3,$4,$5,$6,$8,$9,$10);Frame_class::getInstance().closeFrame();output::printProductionRule(4);};
-    OverRide: /*epsilon*/                                                          %empty {$$ = new Node_Override();output::printProductionRule(5);};
-    OverRide: OVERRIDE                                                             {$$ = new Node_Override($1);output::printProductionRule(6);};
-
-
-
+    OverRide: /*epsilon*/                                                       %empty {$$ = new Node_Override();output::printProductionRule(5);};
+    OverRide: OVERRIDE                                                          {$$ = new Node_Override($1);output::printProductionRule(6);};
     RetType: Type                                                               {$$ = new Node_RetType({$1}, ($1)->type);output::printProductionRule(7);};
     RetType:  VOID                                                              {$$ = new Node_RetType({$1}, Type::VOID);output::printProductionRule(8);};
     Formals: /*epsilon*/                                                        %empty {$$ = new Node_Formals();output::printProductionRule(9);};
@@ -123,9 +115,9 @@ int yyerror(const char* message);
     Statement: Call SC                                                          {$$ = new Node_Statement_Call($1,$2);output::printProductionRule(20);};
     Statement: RETURN SC                                                        {$$ = new Node_Statement_Ret($1,$2);output::printProductionRule(21);};
     Statement: RETURN Exp SC                                                    {$$ = new Node_Statement_Ret($1,$2,$3);output::printProductionRule(22);};
-    Statement: IF LPAREN OpenScopeBlock ExpBool RPAREN Statement CloseScope %prec IF                          {$$ = new Node_Statement_IF($1,$2,$4,$5,$6);output::printProductionRule(23);};
-    Statement: IF LPAREN OpenScopeBlock ExpBool RPAREN Statement CloseScope ELSE OpenScopeBlock Statement CloseScope                   {$$ = new Node_Statement_IF($1,$2,$4,$5,$6,$8,$10);output::printProductionRule(24);};
-    Statement: WHILE LPAREN OpenScopeCont ExpBool RPAREN Statement CloseScope                               {$$ = new Node_Statement_While($1,$2,$4,$5,$6);output::printProductionRule(25);};
+    Statement: IF LPAREN OpenScopeBlock ExpBool RPAREN Statement CloseScope %prec IF      {$$ = new Node_Statement_IF($1,$2,$4,$5,$6);output::printProductionRule(23);};
+    Statement: IF LPAREN OpenScopeBlock ExpBool RPAREN Statement CloseScope ELSE OpenScopeBlock Statement CloseScope      {$$ = new Node_Statement_IF($1,$2,$4,$5,$6,$8,$10);output::printProductionRule(24);};
+    Statement: WHILE LPAREN OpenScopeCont ExpBool RPAREN Statement CloseScope      {$$ = new Node_Statement_While($1,$2,$4,$5,$6);output::printProductionRule(25);};
     Statement: BREAK SC                                                         {$$ = new Node_Statement_LoopMod($1,$2);output::printProductionRule(26);};
     Statement: CONTINUE SC                                                      {$$ = new Node_Statement_LoopMod($1,$2);output::printProductionRule(27);};
     Call: ID LPAREN ExpList RPAREN                                              {$$ = new Node_Call($1,$2,$3,$4);output::printProductionRule(28);};
@@ -153,9 +145,9 @@ int yyerror(const char* message);
     Exp: LPAREN Type RPAREN Exp %prec EQUALITY                                  {$$ = new Node_Exp_Cast({$1,$2,$3,$4});output::printProductionRule(48);};
     ExpBool: Exp                                                                {$$ = new Node_Exp_Bool($1);};
 
-    OpenScopeBlock: /*epsilon*/                                                          %empty {Frame_class::getInstance().newFrame(FrameType::BLOCK);};
-    OpenScopeCont: /*epsilon*/                                                          %empty {Frame_class::getInstance().newFrame(FrameType::LOOP);};
-    CloseScope: /*epsilon*/                                                          %empty {Frame_class::getInstance().closeFrame();};
+    OpenScopeBlock: /*epsilon*/                                                 %empty {Frame_class::getInstance().newFrame(FrameType::BLOCK);};
+    OpenScopeCont: /*epsilon*/                                                  %empty {Frame_class::getInstance().newFrame(FrameType::LOOP);};
+    CloseScope: /*epsilon*/                                                     %empty {Frame_class::getInstance().closeFrame();};
 %%
 
 int main(){

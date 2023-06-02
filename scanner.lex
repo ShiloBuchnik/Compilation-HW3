@@ -88,5 +88,4 @@ token_string    (\"([^\n\r\"\\]|\\[rnt"\\])+\")
 {whitespace}                 ;
 .		output::errorLex(yylineno);exit(0);
 
-
 %%
